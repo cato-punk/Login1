@@ -1,49 +1,62 @@
 package Modelo;
 
-/**
- * Clase que representa a un usuario del sistema.
- * Encapsula el nombre y la clave del usuario.
- */
+
+ // ahora incluye su nombre, clave y un objeto Perfil asociado.
+
 public class Usuario {
+    private String nombre;
+    private String clave;
+    private Perfil perfil; //  asociacion 1:1 con la clase Perfil
 
-    private String nombre; // priv para el nombre del usuario
-    private String clave;  // priv para la clave (contraseña) del usuario
-
-    /**
-     * Constructor que inicializa los atributos del usuario.
-     *
-     * @param nombre nombre del usuario
-     * @param clave clave del usuario
-     */
-    public Usuario(String nombre, String clave) {
-        this.nombre = nombre; //  el nombre del usuario  lo inicializa
-        this.clave = clave;   // inicializa la clave del usuario
+    public Usuario(String nombre, String clave, String correo) {
+        this.nombre = nombre;
+        this.clave = clave;
+        this.perfil = new Perfil(correo);
     }
 
     /**
-     * Devuelve el nombre del usuario.
+     * Constructor para cargar un usuario existente (por ejemplo, desde login.txt).
+     * Este constructor asumiría que el perfil se cargaría por separado o se reconstruiría.
+     * Sin embargo, para mantener la cohesión de Usuario y Perfil, es mejor que este constructor
+     * también reciba los datos necesarios para reconstruir el Perfil.
      *
-     * @return El nombre del usuario.
+     * @param nombre             Nombre del usuario.
+     * @param clave              Contraseña del usuario.
+     * @param correo             Correo del perfil.
+     * @param fechaCreacionStr   Fecha de creación del perfil como String.
+     * @param tareasBaja         Cantidad de tareas de baja prioridad.
+     * @param tareasMedia        Cantidad de tareas de media prioridad.
+     * @param tareasAlta         Cantidad de tareas de alta prioridad.
      */
+    public Usuario(String nombre, String clave, String correo, String fechaCreacionStr,
+                   int tareasBaja, int tareasMedia, int tareasAlta) {
+        this.nombre = nombre;
+        this.clave = clave;
+        this.perfil = new Perfil(correo, fechaCreacionStr, tareasBaja, tareasMedia, tareasAlta); //con los datos dados
+    }
+
+    // --- Getters ---
+
     public String getNombre() {
         return nombre;
     }
 
-    /**
-     * Devuelve la clave (contraseña) del usuario.
-     *
-     * @return La clave del usuario.
-     */
     public String getClave() {
         return clave;
     }
 
-    /**
-     * Establece una nueva clave para el usuario.
-     *
-     * @param clave La nueva clave.
-     */
+    public Perfil getPerfil() { // nuevo getter para acceder al objeto Perfil
+        return perfil;
+    }
+
+    // --- Setters ( para clave )
+
     public void setClave(String clave) {
         this.clave = clave;
+    }
+
+
+    public void setPerfil(Perfil perfil) {
+        this.perfil = perfil;
     }
 }

@@ -1,40 +1,38 @@
 package Controlador;
 
 import Modelo.DatosLogin;
-import Modelo.Usuario;    // la nueva clase Usuario
-import java.util.List;    // List para trabajar con colecciones de usuarios
+import Modelo.Usuario;
+import Modelo.GestorUsuarios; //para obtener la instancia de DatosLogin
 
-/**
- * Clase encargada de la lógica de autenticación.
- */
 public class Login {
 
-    /**
-     * Verifica si las credenciales son válidas.
-     * Se comunica con el paquete Modelo para obtener los datos.
-     *
-     * @param usuario nombre de usuario ingresado
-     * @param clave   contraseña ingresada
-     * @param datos   instancia de DatosLogin que contiene la lista de usuarios
-     * @return Usuario autenticado si es válido, null si no
-     */
-    public Usuario autenticar(String usuario, String clave, DatosLogin datos) {
-        // para evitar NullPointerException
-        if (usuario == null || clave == null || datos == null) {
+    private final DatosLogin datosLogin;
+
+    public Login() {
+        // obtenemos la instancia de DatosLogin desde GestorUsuarios
+        this.datosLogin = new GestorUsuarios().getDatosLogin();
+    }
+
+    public Usuario autenticar(String nombreUsuario, String clave) {
+        //el objeto Usuario del mapa en DatosLogin
+        Usuario usuario = datosLogin.getUsuario(nombreUsuario);
+
+        if (usuario != null) {
+            //si la clave proporcionada coincide con la clave del usuario cargado
+            if (usuario.getClave().equals(clave)) {
+                return usuario; //autenticacion exitosa, devuelve el objeto Usuario
+            } else {
+                System.out.println("Contraseña incorrecta para el usuario: " + nombreUsuario);
+                return null;
+            }
+        } else {
+            System.out.println("Usuario '" + nombreUsuario + "' no encontrado.");
             return null;
         }
+    }
 
-        // obtener la lista de usuarios desde DatosLogin
-        List<Usuario> listaUsuarios = datos.getUsuarios();
 
-        // Iterar sobre la lista de usuarios para buscar una coincidencia
-        for (Usuario u : listaUsuarios) {
-            // Comparar el nombre de usuario ignorando mayúsculas/minúsculas o espacios si es necesario,,
-            // y la clave.  usa .equals() para la clave
-            if (u.getNombre().equals(usuario) && u.getClave().equals(clave)) {
-                return u; //  el objeto Usuario si las credenciales coinciden
-            }
-        }
-        return null; //  null si no se encuentra ningún usuario con las credenciales
+    public DatosLogin getDatosLogin() {
+        return datosLogin;
     }
 }

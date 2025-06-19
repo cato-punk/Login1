@@ -1,148 +1,166 @@
 package Controlador;
 
-import Modelo.Usuario;
 import Modelo.DatosSesion;
-import Modelo.GestorUsuarios; //
-import java.util.Scanner;    //  para la entrada del usuari
+import Modelo.Prioridad;
+import Modelo.Tarea;
+import Modelo.Usuario; // ahora importa Usuario para acceder a sus datos (nombre, perfil)
+import java.util.List;
+import java.util.Scanner;
 
-/**
- * Representa la sesión de un usuario autenticado.
- */
+
 public class SesionActiva {
 
-    private final Usuario usuario; // el objeto Usuario autenticado
-    private final Scanner scanner = new Scanner(System.in);
-    private final DatosSesion datosSesion; // inst para manejar las tareas del usuario
-    private GestorUsuarios gestorUsuarios; // inst para registrar usuarios (solo si es admin)
+    private final Usuario usuarioAutenticado;
+    private final DatosSesion datosSesion;
+    private final Scanner scanner;
 
-    /**
-     * Constructor que inicializa el usuario y sus datos de sesión.
-     *
-     * @param usuario usuario autenticado (objeto Usuario)
-     */
-    public SesionActiva(Usuario usuario) {
-        this.usuario = usuario; // inicializa el objeto Usuario
-        // DatosSesion para el usuario actual, usando el nombre del usuario
-        this.datosSesion = new DatosSesion(usuario.getNombre());
 
-        // Solo GestorUsuarios si el usuario es admin
-        if (usuario.getNombre().equals("admin")) {
-            this.gestorUsuarios = new GestorUsuarios();
-        }
+    public SesionActiva(Usuario usuarioAutenticado) {
+        this.usuarioAutenticado = usuarioAutenticado;
+        this.datosSesion = new DatosSesion(usuarioAutenticado); // pasa el objeto Usuario a DatosSesion
+        this.scanner = new Scanner(System.in);
+        System.out.println("¡Sesión iniciada para " + usuarioAutenticado.getNombre() + "!");
+        mostrarDatosPerfil(); //  al iniciar sesion
     }
 
-    /**
-     * Muestra el menú interactivo de la sesión.
-     * Controla el ciclo de operaciones disponibles en sesión.
-     */
+
+    private void mostrarDatosPerfil() {
+        System.out.println("\n--- PERFIL DE USUARIO ---");
+        System.out.println("Usuario: " + usuarioAutenticado.getNombre());
+        System.out.println("Correo: " + usuarioAutenticado.getPerfil().getCorreo());
+        System.out.println("Miembro desde: " + usuarioAutenticado.getPerfil().getFechaCreacionAsString());
+        System.out.println("Tareas por Prioridad (añadidas):");
+        System.out.println("  Baja: " + usuarioAutenticado.getPerfil().getTareasBajaPrioridad());
+        System.out.println("  Media: " + usuarioAutenticado.getPerfil().getTareasMediaPrioridad());
+        System.out.println("  Alta: " + usuarioAutenticado.getPerfil().getTareasAltaPrioridad());
+        System.out.println("-------------------------");
+    }
+
+
     public void menuSesion() {
         String opcion;
         do {
             mostrarOpcionesSesion();
-            System.out.print("Seleccione una opción: ");
             opcion = scanner.nextLine();
             ejecutarOpcionSesion(opcion);
-        } while (!opcion.equals("4"));
-        System.out.println("Cerrando la sesion de " + usuario.getNombre() + ". Hasta Pronto");
+        } while (!opcion.equals("6"));
+
+
+        datosSesion.cerrarSesion(); //el cierre de sesion en el historial
+        datosSesion.getHistorial().mostrarHistorial(); // muestra el historial al salir
+        System.out.println("Sesion de " + usuarioAutenticado.getNombre() + " cerrada. Volviendo al menu principal.");
     }
 
-    /**
-     * Muestra las opciones del menú de sesión.
-     * Si el usuario es 'admin', muestra la opción de registrar nuevos usuarios.
-     */
+
     private void mostrarOpcionesSesion() {
-        System.out.println("\n--- MENÚ DE SESIÓN (" + usuario.getNombre() + ") ---");
-        System.out.println("1. Mostrar mis tareas");
-        System.out.println("2. Escribir nueva tarea");
-
-        if (usuario.getNombre().equals("admin")) { // si el usuario es admin
-            System.out.println("3. Registrar nuevo usuario");
-        }
-        System.out.println("4. Cerrar sesión");
-        System.out.println("----------------------------------");
+        System.out.println("\n--- MENÚ DE TAREAS (" + usuarioAutenticado.getNombre() + ") ---");
+        System.out.println("1. Agregar nueva tarea");
+        System.out.println("2. Ver todas las tareas");
+        System.out.println("3. Ver tareas activas");
+        System.out.println("4. Ver tareas finalizadas");
+        System.out.println("5. Marcar tarea como finalizada");
+        System.out.println("6. Cerrar Sesion");
+        System.out.print("_____Ingrese una opcion: ");
     }
 
-    /**
-     * Ejecuta la opción seleccionada por el usuario en la sesión activa.
-     *
-     * @param opcion La opción ingresada por el usuario.
-     */
+
     private void ejecutarOpcionSesion(String opcion) {
         switch (opcion) {
             case "1":
-                mostrarTareas(); // las tareas del usuario
+                manejarAgregarTarea();
                 break;
             case "2":
-                escribirTarea();
+                mostrarTareas(datosSesion.getTareas(), "TODAS LAS TAREAS");
                 break;
             case "3":
-                if (usuario.getNombre().equals("admin")) {
-                    registrarUsuario();
-                } else {
-                    System.out.println("Opción no valida. No tienes permisos para registrar usuarios.");
-                }
+                mostrarTareas(datosSesion.getTareasActivas(), "TAREAS ACTIVAS");
                 break;
             case "4":
-
+                mostrarTareas(datosSesion.getTareasFinalizadas(), "TAREAS FINALIZADAS");
+                break;
+            case "5":
+                manejarMarcarTareaFinalizada();
+                break;
+            case "6":
                 break;
             default:
-                System.out.println("Opción no válida. Intente de nuevo.");
+                System.out.println("Opcion invalida. Por favor, ingrese una opcion entre 1 y 6.");
                 break;
         }
     }
 
-    /**
-     * Pide una tarea al usuario y la delega a DatosSesion para su escritura.
-     */
-    private void escribirTarea() {
-        System.out.print("Ingrese la nueva tarea: ");
-        String descripcionTarea = scanner.nextLine();
-        // Ahora, DatosSesion tiene un método agregarTarea que toma un String
-        datosSesion.agregarTarea(descripcionTarea); // la tarea a DatosSesion
-        System.out.println("Tarea guardada correctamente.");
+    private void manejarAgregarTarea() {
+        System.out.print("Ingrese la descripcion de su tarea: ");
+        String descripcion = scanner.nextLine();
+
+        Prioridad prioridad = solicitarPrioridad();
+
+        if (prioridad != null) {
+            datosSesion.agregarTarea(descripcion, prioridad);
+            System.out.println("Tarea agregada exitosamente con prioridad " + prioridad.name() + ".");
+        } else {
+            System.out.println("No se pudo agregar la tarea debido a una prioridad invalida.");
+        }
     }
 
-    /**
-     * Muestra todas las tareas del usuario.
-     * Este método debería invocar a DatosSesion para obtener y mostrar las tareas.
-     */
-    private void mostrarTareas() {
-        System.out.println("\n--- TAREAS DE " + usuario.getNombre() + " ---");
-        if (datosSesion.getTareas().isEmpty()) { //  el getter de DatosSesion para obtener la lista de tareas
-            System.out.println("(No hay tareas registradas)");
+
+    private Prioridad solicitarPrioridad() {
+        System.out.println("Seleccione la prioridad:");
+        System.out.println("  1. BAJA");
+        System.out.println("  2. MEDIA");
+        System.out.println("  3. ALTA");
+        System.out.print("Ingrese el numero de la prioridad: ");
+        String opcionPrioridad = scanner.nextLine();
+
+        switch (opcionPrioridad) {
+            case "1":
+                return Prioridad.BAJA;
+            case "2":
+                return Prioridad.MEDIA;
+            case "3":
+                return Prioridad.ALTA;
+            default:
+                System.out.println("Opcion de prioridad invalida. Por favor, ingrese 1, 2 o 3.");
+                return null;
+        }
+    }
+
+
+    private void mostrarTareas(List<Tarea> tareas, String titulo) {
+        System.out.println("\n--- " + titulo + " ---");
+        if (tareas.isEmpty()) {
+            System.out.println("No hay tareas para mostrar en esta categoria.");
         } else {
-            for (int i = 0; i < datosSesion.getTareas().size(); i++) {
-                // a la descripción de cada objeto Tarea
-                System.out.println((i + 1) + ". " + datosSesion.getTareas().get(i).getDescripcion());
+            for (int i = 0; i < tareas.size(); i++) {
+                Tarea tarea = tareas.get(i);
+                String estado = tarea.isFinalizada() ? "[FINALIZADA]" : "[ACTIVA]";
+                System.out.println((i + 1) + ". " + estado + " (Prioridad: " + tarea.getPrioridad().name() + ") - " + tarea.getDescripcion());
             }
         }
-        System.out.println("------------------------------------");
+        System.out.println("-----------------------------");
     }
 
-    /**
-     * Registra un nuevo usuario en el archivo login.txt.
-     * Usa GestorUsuarios para registrar un nuevo usuario (solo para admin).
-     */
-    private void registrarUsuario() {
-        if (gestorUsuarios == null) {
-            System.out.println("Error interno: Gestor de usuarios no disponible.");
-            return;
-        }
-        System.out.println("\n--- REGISTRAR NUEVO USUARIO ---");
-        System.out.print("Ingrese el nuevo nombre de usuario: ");
-        String nuevoUsuarioNombre = scanner.nextLine();
-        System.out.print("Ingrese la contraseña para el nuevo usuario: ");
-        String nuevaClave = scanner.nextLine();
 
-        if (nuevoUsuarioNombre.isEmpty() || nuevaClave.isEmpty()) {
-            System.out.println("Usuario y contraseña no pueden estar vacíos.");
+    private void manejarMarcarTareaFinalizada() {
+        List<Tarea> todasLasTareas = datosSesion.getTareas(); //  todas las tareas para listarlas
+        if (todasLasTareas.isEmpty()) {
+            System.out.println("No hay tareas para marcar como finalizadas.");
             return;
         }
 
-        if (gestorUsuarios.registrar(nuevoUsuarioNombre, nuevaClave)) { // el registro a GestorUsuarios
-            System.out.println("Usuario '" + nuevoUsuarioNombre + "' registrado exitosamente.");
-        } else {
-            System.out.println("Error al registrar el usuario. Es posible que ya exista o haya un problema con el archivo.");
+        mostrarTareas(todasLasTareas, "SELECCIONE TAREA A FINALIZAR");
+
+        System.out.print("Ingrese el numero de la tarea a marcar como finalizada: ");
+        try {
+            int indice = Integer.parseInt(scanner.nextLine());
+            if (datosSesion.marcarTareaComoFinalizada(indice - 1)) { // Resta 1 porque el usuario ve 1-based
+                System.out.println("Tarea marcada como finalizada exitosamente.");
+            } else {
+                // El mensaje de error específico ya lo da datosSesion.marcarTareaComoFinalizada
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Entrada invalida. Por favor, ingrese un numero.");
         }
     }
+
 }

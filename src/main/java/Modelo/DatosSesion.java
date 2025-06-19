@@ -7,101 +7,141 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List; // List para el tipo de retorno del getter
+import java.util.List;
+import java.util.stream.Collectors; // para usar stream().collect(Collectors.toList())
 
-/**
- * Maneja las tareas personales de un usuario autenticado.
- * Cada usuario tiene su propio archivo de tareas (ej. usuario_todo.txt).
- */
 public class DatosSesion {
 
-    private final String nombreArchivo; // archivo de tareas para el usuario actual
-    private final List<Tarea> tareas;   // lista interna de objetos Tarea
+    private final String nombreArchivoTareas; //  archivo de tareas para el usuario actual
+    private final List<Tarea> tareas;         // lista interna de objetos Tarea
+    private final Usuario usuarioSesion;
+    private final HistorialSesion historial;  // asociacion con la clase HistorialSesion
 
-    /**
-     * Constructor para DatosSesion.
-     *
-     * @param usuario El nombre del usuario para el cual se gestionarán las tareas.
-     */
-    public DatosSesion(String usuario) {
-        this.nombreArchivo = "src/main/resources/" + usuario + "_todo.txt";
-        this.tareas = new ArrayList<>(); // inicia la lista de tareas
-        crearArchivoSiNoExiste();       //  que el archivo exista
-        cargarTareas();                 // tareas existentes
+    // delimitador usado en el archivo de tareas
+    private static final String SEPARATOR = ";";
+
+    public DatosSesion(Usuario usuarioSesion) {
+        this.usuarioSesion = usuarioSesion;
+        this.nombreArchivoTareas = "src/main/resources/" + usuarioSesion.getNombre() + "_todo.txt";
+        this.tareas = new ArrayList<>();
+        this.historial = new HistorialSesion(usuarioSesion.getNombre()); // instancia el historial para este usuario
+        crearArchivoSiNoExiste();
+        cargarTareas(); // carga las tareas existentes al inicializar
     }
 
-    /**
-     * Crea el archivo de tareas si no existe.
-     */
+
     private void crearArchivoSiNoExiste() {
-        File archivo = new File(nombreArchivo);
+        File archivo = new File(nombreArchivoTareas);
         if (!archivo.exists()) {
             try {
                 archivo.createNewFile();
-                System.out.println("Archivo de tareas creado para " + nombreArchivo);
+                System.out.println("archivo de tareas creado para " + nombreArchivoTareas);
             } catch (IOException e) {
-                System.err.println("Error al crear el archivo de tareas " + nombreArchivo + ": " + e.getMessage());
+                System.err.println("Error al crear el archivo de tareas " + nombreArchivoTareas + ": " + e.getMessage());
             }
         }
     }
 
-    /**
-     * Carga las tareas desde el archivo al inicializar la clase.
-     * Lee el archivo y crea objetos Tarea.
-     */
+
     private void cargarTareas() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(nombreArchivo))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(nombreArchivoTareas))) {
             String linea;
             while ((linea = reader.readLine()) != null) {
                 if (!linea.trim().isEmpty()) {
-                    tareas.add(new Tarea(linea.trim())); // crear objeto Tarea y lo añade a la lista
+                    String[] partes = linea.split(SEPARATOR);
+                    if (partes.length == 3) {
+                        String descripcion = partes[0].trim();
+                        String prioridadStr = partes[1].trim();
+                        boolean finalizada = Boolean.parseBoolean(partes[2].trim());
+                        tareas.add(new Tarea(descripcion, prioridadStr, finalizada));
+                    } else {
+                        System.err.println("Advertencia: Linea con formato invalido en archivo de tareas: " + linea);
+                    }
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error al leer el archivo de tareas " + nombreArchivo + ": " + e.getMessage());
-
+            System.err.println("error al leer el archivo de tareas " + nombreArchivoTareas + ": " + e.getMessage());
         }
     }
 
-    /**
-     * Guarda la lista actual de tareas en el archivo, sobrescribiendo el contenido existente.
-     * Esto asegura que la lista en memoria y en disco estén sincronizadas.
-     */
+
     private void guardarTareasEnArchivo() {
-        //  false en FileWriter para sobrescribir el archivo, no para añadir.
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(nombreArchivo, false))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(nombreArchivoTareas, false))) {
             for (Tarea tarea : tareas) {
-                writer.write(tarea.getDescripcion());
+                writer.write(tarea.getDescripcion() + SEPARATOR +
+                        tarea.getPrioridad().name() + SEPARATOR + // guarda el nombre del Enum
+                        tarea.isFinalizada());                     //  true o false lo guarda
                 writer.newLine();
             }
         } catch (IOException e) {
-            System.err.println("Error al guardar tareas en el archivo " + nombreArchivo + ": " + e.getMessage());
+            System.err.println("Error al guardar tareas en el archivo " + nombreArchivoTareas + ": " + e.getMessage());
         }
     }
 
-    /**
-     * Agrega una nueva tarea a la lista y la guarda en el archivo.
-     *
-     * @param descripcion texto de la tarea
-     */
-    public void agregarTarea(String descripcion) {
+
+    public void agregarTarea(String descripcion, Prioridad prioridad) {
         if (descripcion != null && !descripcion.trim().isEmpty()) {
-            tareas.add(new Tarea(descripcion.trim())); // crear un objeto Tarea y lo añade a la lista
-            guardarTareasEnArchivo(); //  toda la lista actualizada en el archivo
+            Tarea nuevaTarea = new Tarea(descripcion.trim(), prioridad);
+            tareas.add(nuevaTarea);
+            guardarTareasEnArchivo(); // guarda toda la lista actualizada en el archivo
+
+            usuarioSesion.getPerfil().incrementarContadorTarea(prioridad);
+            //los cambios en el Perfil deben guardarse al final de la sesion
+            //se manejara en DatosLogin o en el cierre de SesionActiva
+            historial.registrarEvento("Tarea añadida: '" + descripcion + "' con prioridad " + prioridad.name());
         } else {
-            System.out.println("No se puede agregar una tarea vacía.");
+            System.out.println("No se puede agregar una tarea vacia.");
         }
     }
 
-    /**
-     * Devuelve la lista de tareas.
-     *
-     * @return lista de objetos Tarea
-     */
-    public List<Tarea> getTareas() {
-        return tareas;
+
+    public boolean marcarTareaComoFinalizada(int indice) {
+        if (indice >= 0 && indice < tareas.size()) {
+            Tarea tarea = tareas.get(indice);
+            if (!tarea.isFinalizada()) {
+                tarea.marcarComoFinalizada();
+                guardarTareasEnArchivo(); // Persiste el cambio de estado
+
+
+                historial.registrarEvento("Tarea finalizada: '" + tarea.getDescripcion() + "'");
+                return true;
+            } else {
+                System.out.println("la tarea ya estaba finalizada.");
+                return false;
+            }
+        } else {
+            System.out.println("indice de tarea invalido.");
+            return false;
+        }
     }
 
-    // mostrar Tareas se fue
+    public List<Tarea> getTareas() {
+        return new ArrayList<>(tareas); // devuelve una copia para evitar modificaciones
+    }
 
+    public List<Tarea> getTareasActivas() {
+        // Usa Streams API (Java 8+) para filtrar, es una forma moderna y concisa
+        return tareas.stream()
+                .filter(tarea -> !tarea.isFinalizada())
+                .collect(Collectors.toList());
+    }
+
+
+    public List<Tarea> getTareasFinalizadas() {
+        return tareas.stream()
+                .filter(Tarea::isFinalizada) //  tarea -> tarea.isFinalizada()
+                .collect(Collectors.toList());
+    }
+
+
+    public HistorialSesion getHistorial() {
+        return historial;
+    }
+
+
+    public void cerrarSesion() {
+        historial.registrarEvento("Cierre de sesión de usuario: " + usuarioSesion.getNombre());
+        //  no se guarda el Perfil, porque la responsabilidad de guardar los usuarios (y sus perfiles)
+        // res en DatosLogin o GestorUsuarios al cerrar la app o cuando se modifica el usuario
+    }
 }

@@ -6,92 +6,104 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList; // arraylist obejtos usuario
-import java.util.List; // Se usa List para el tipo de retorno del getter
+import java.util.HashMap;
+import java.util.Map;
 
-/**
- * Clase encargada de gestionar el acceso a los datos de login.
- * Carga los usuarios desde login.txt y los administra como objetos Usuario.
- */
 public class DatosLogin {
 
-    // lista interna de usuarios, encapsulamiento
-    private final List<Usuario> usuarios;
-    private final String archivo = "src/main/resources/login.txt"; // Ruta login.txt
+    private final String archivoUsuarios = "src/main/resources/login.txt";
+    // almacena usuarios por su nombre
+    private final Map<String, Usuario> usuarios;
 
-    /**
-     * Constructor que carga los usuarios desde login.txt.
-     * Asegura que el archivo login.txt exista antes de intentar cargarlo.
-     */
+    // Delimitador para el archivo de usuarios
+    private static final String SEPARATOR = ";";
+
     public DatosLogin() {
-        this.usuarios = new ArrayList<>(); // lista de usuario se inicializa
+        this.usuarios = new HashMap<>();
         crearArchivoSiNoExiste();
         cargarUsuarios();
     }
 
-    /**
-     * Crea el archivo login.txt si no existe.
-     */
     private void crearArchivoSiNoExiste() {
-        File file = new File(archivo);
-        if (!file.exists()) { // si el archivo no existe
+        File archivo = new File(archivoUsuarios);
+        if (!archivo.exists()) {
             try {
-                file.createNewFile();
-                System.out.println("Archivo de credenciales 'login.txt' creado al iniciar DatosLogin.");
+                archivo.createNewFile();
+                System.out.println("Archivo de usuarios creado: " + archivoUsuarios);
+                // Añadir un usuario admin por defecto si el archivo es nuevo
+                Usuario admin = new Usuario("admin", "adminpass", "admin@sistema.com"); // Crea un nuevo Perfil para admin
+                usuarios.put(admin.getNombre(), admin);
+                guardarUsuarios(); // Guarda el admin en el nuevo archivo
             } catch (IOException e) {
-                System.err.println("Error al crear el archivo login.txt: " + e.getMessage());
+                System.err.println("Error al crear el archivo de usuarios: " + e.getMessage());
             }
         }
     }
 
-    /**
-     * Lee el archivo login.txt y agrega las líneas válidas a la lista de usuarios.
-     * Ignora líneas vacías o mal formateadas.
-     * Carga los pares usuario;contraseña y los encapsula en instancias de Usuario.
-     */
     private void cargarUsuarios() {
-        // try-with-resources para asegurar que BufferedReader y FileReader se cierren
-        try (BufferedReader lector = new BufferedReader(new FileReader(archivo))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(archivoUsuarios))) {
             String linea;
-            while ((linea = lector.readLine()) != null) { // lee línea por línea
-                if (linea.trim().isEmpty() || !linea.contains(";")) {
-                    // ignorar lineas vacias o con (;)
-                    continue;
-                }
-                String[] partes = linea.split(";", 2); // divide en usuario y contraseña
-                if (partes.length == 2) {
-                    String nombreUsuario = partes[0].trim(); // para eliminar espacios en blanco
-                    String claveUsuario = partes[1].trim();
-                    if (!nombreUsuario.isEmpty() && !claveUsuario.isEmpty()) {
-                        // los datos en una instancia usuario , los encapsula
-                        usuarios.add(new Usuario(nombreUsuario, claveUsuario));
+            while ((linea = reader.readLine()) != null) {
+                if (!linea.trim().isEmpty()) {
+                    String[] partes = linea.split(SEPARATOR);
+                    // Se esperan 7 partes para Usuario + Perfil
+                    if (partes.length == 7) {
+                        String nombre = partes[0].trim();
+                        String clave = partes[1].trim();
+                        String correo = partes[2].trim();
+                        String fechaCreacionStr = partes[3].trim();
+                        int tareasBaja = Integer.parseInt(partes[4].trim());
+                        int tareasMedia = Integer.parseInt(partes[5].trim());
+                        int tareasAlta = Integer.parseInt(partes[6].trim());
+
+                        Usuario usuario = new Usuario(nombre, clave, correo, fechaCreacionStr,
+                                tareasBaja, tareasMedia, tareasAlta);
+                        usuarios.put(nombre, usuario);
                     } else {
-                        System.err.println("Advertencia: Usuario o contraseña vacíos en '" + archivo + "': " + linea);
+                        System.err.println("Advertencia: linea con formato invalido en login.txt: " + linea);
                     }
-                } else {
-                    System.err.println("Advertencia: Formato incorrecto en '" + archivo + "': " + linea);
                 }
             }
         } catch (IOException e) {
-            System.err.println("Error al leer el archivo " + archivo + ": " + e.getMessage());
+            System.err.println("Error al leer el archivo de usuarios " + archivoUsuarios + ": " + e.getMessage());
+        } catch (NumberFormatException e) {
+            System.err.println("Error de formato numérico en login.txt: " + e.getMessage());
         }
     }
 
-    /**
-     * Devuelve la lista de usuarios cargados.
-     *
-     * @return Lista de objetos Usuario.
-     */
-    public List<Usuario> getUsuarios() {
-        return usuarios;
-    }
-
-    public Usuario buscarUsuarioPorNombre(String nombre) {
-        for (Usuario u : usuarios) {
-            if (u.getNombre().equals(nombre)) {
-                return u;
+    public void guardarUsuarios() {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivoUsuarios, false))) { // false para sobrescribir
+            for (Usuario usuario : usuarios.values()) {
+                Perfil perfil = usuario.getPerfil();
+                writer.write(usuario.getNombre() + SEPARATOR +
+                        usuario.getClave() + SEPARATOR +
+                        perfil.getCorreo() + SEPARATOR +
+                        perfil.getFechaCreacionAsString() + SEPARATOR + // Formato String de fecha
+                        perfil.getTareasBajaPrioridad() + SEPARATOR +
+                        perfil.getTareasMediaPrioridad() + SEPARATOR +
+                        perfil.getTareasAltaPrioridad());
+                writer.newLine();
             }
+        } catch (IOException e) {
+            System.err.println("Error al guardar usuarios en el archivo " + archivoUsuarios + ": " + e.getMessage());
         }
-        return null; //  null si el usuario no se encuentra
+    }
+
+
+    public Usuario getUsuario(String nombreUsuario) {
+        return usuarios.get(nombreUsuario);
+    }
+
+    public boolean agregarNuevoUsuario(Usuario usuario) {
+        if (usuarios.containsKey(usuario.getNombre())) {
+            return false; // El usuario ya existe
+        }
+        usuarios.put(usuario.getNombre(), usuario);
+        // Después de agregar, se debe llamar a guardarUsuarios() para persistir.
+        return true;
+    }
+
+    public boolean existeUsuario(String nombreUsuario) {
+        return usuarios.containsKey(nombreUsuario);
     }
 }
