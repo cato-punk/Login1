@@ -15,7 +15,6 @@ public class DatosLogin {
     // almacena usuarios por su nombre
     private final Map<String, Usuario> usuarios;
 
-    // Delimitador para el archivo de usuarios
     private static final String SEPARATOR = ";";
 
     public DatosLogin() {
@@ -33,7 +32,7 @@ public class DatosLogin {
                 // Añadir un usuario admin por defecto si el archivo es nuevo
                 Usuario admin = new Usuario("admin", "adminpass", "admin@sistema.com"); // Crea un nuevo Perfil para admin
                 usuarios.put(admin.getNombre(), admin);
-                guardarUsuarios(); // Guarda el admin en el nuevo archivo
+                guardarUsuarios();
             } catch (IOException e) {
                 System.err.println("Error al crear el archivo de usuarios: " + e.getMessage());
             }
@@ -46,7 +45,6 @@ public class DatosLogin {
             while ((linea = reader.readLine()) != null) {
                 if (!linea.trim().isEmpty()) {
                     String[] partes = linea.split(SEPARATOR);
-                    // Se esperan 7 partes para Usuario + Perfil
                     if (partes.length == 7) {
                         String nombre = partes[0].trim();
                         String clave = partes[1].trim();
@@ -96,10 +94,10 @@ public class DatosLogin {
 
     public boolean agregarNuevoUsuario(Usuario usuario) {
         if (usuarios.containsKey(usuario.getNombre())) {
-            return false; // El usuario ya existe
+            return false; //usuario ya existe
         }
         usuarios.put(usuario.getNombre(), usuario);
-        // Después de agregar, se debe llamar a guardarUsuarios() para persistir.
+        //  debe llamar a guardarUsuarios()
         return true;
     }
 

@@ -71,7 +71,7 @@ public class ConsolaLogin {
         System.out.print("Ingrese su contraseña: ");
         String adminClave = scanner.nextLine();
 
-        // Autenticar al admin primero
+
         Usuario adminUsuario = loginControlador.autenticar(adminNombre, adminClave);
 
         if (adminUsuario != null && adminUsuario.getNombre().equals("admin")) {
@@ -80,12 +80,12 @@ public class ConsolaLogin {
             String nuevoNombre = scanner.nextLine();
             System.out.print("Ingrese la contraseña del nuevo usuario: ");
             String nuevaClave = scanner.nextLine();
-            System.out.print("Ingrese el correo del nuevo usuario: "); // Solicitar el correo para el Perfil
+            System.out.print("Ingrese el correo del nuevo usuario: ");
             String nuevoCorreo = scanner.nextLine();
 
 
             new Modelo.GestorUsuarios().registrar(nuevoNombre, nuevaClave, nuevoCorreo);
-            // ya no es necesario llamar a guardarUsuarios() , GestorUsuarios.registrar() lo hace.
+
         } else {
             System.out.println("Acceso denegado. Solo el administrador puede registrar nuevos usuarios.");
         }

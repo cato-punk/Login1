@@ -44,7 +44,7 @@ public class Perfil {
         this.tareasAltaPrioridad = tareasAlta;
     }
 
-    // --- Getters ---
+    // getters
 
     public String getCorreo() {
         return correo;
@@ -78,15 +78,8 @@ public class Perfil {
         this.correo = correo;
     }
 
-    // No se suele tener un setter para fechaCreacion en un perfil una vez creado,
-    // pero si fuera necesario para carga, se podría añadir.
     // public void setFechaCreacion(LocalDate fechaCreacion) { this.fechaCreacion = fechaCreacion; }
 
-    /**
-     * Incrementa el contador de tareas de la prioridad especificada.
-     *
-     * @param prioridad La prioridad de la tarea a incrementar.
-     */
     public void incrementarContadorTarea(Prioridad prioridad) {
         switch (prioridad) {
             case BAJA:
@@ -101,12 +94,7 @@ public class Perfil {
         }
     }
 
-    /**
-     * Decrementa el contador de tareas de la prioridad especificada.
-     * Útil si se elimina o cambia la prioridad de una tarea.
-     *
-     * @param prioridad La prioridad de la tarea a decrementar.
-     */
+
     public void decrementarContadorTarea(Prioridad prioridad) {
         switch (prioridad) {
             case BAJA:

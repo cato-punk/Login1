@@ -156,7 +156,7 @@ public class SesionActiva {
             if (datosSesion.marcarTareaComoFinalizada(indice - 1)) { // Resta 1 porque el usuario ve 1-based
                 System.out.println("Tarea marcada como finalizada exitosamente.");
             } else {
-                // El mensaje de error específico ya lo da datosSesion.marcarTareaComoFinalizada
+
             }
         } catch (NumberFormatException e) {
             System.out.println("Entrada invalida. Por favor, ingrese un numero.");
